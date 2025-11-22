@@ -1,0 +1,303 @@
+package br.com.nexushub.view;
+
+import br.com.nexushub.dao.CompromissoDAO;
+import br.com.nexushub.dao.TarefaDAO;
+import br.com.nexushub.dao.UsuarioDAO;
+import br.com.nexushub.model.Compromisso;
+import br.com.nexushub.model.Tarefa;
+import br.com.nexushub.model.Usuario;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Scanner;
+
+public class MenuPrincipal {
+
+    private static final Scanner scanner = new Scanner(System.in);
+    private static final TarefaDAO tarefaDAO = new TarefaDAO();
+    private static final CompromissoDAO compromissoDAO = new CompromissoDAO();
+    private static final UsuarioDAO usuarioDAO = new UsuarioDAO();
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    private Usuario usuarioLogado;
+
+    public void exibirMenu() {
+        if (!fazerLogin()) {
+            System.out.println("Login falhou. Encerrando aplicação.");
+            return;
+        }
+
+        System.out.println("\nBem-vindo, " + usuarioLogado.getNome() + "!");
+
+        while (true) {
+            System.out.println("\n---[ Nexus Hub - Menu Principal ]---");
+            System.out.println("1. Gerir Tarefas");
+            System.out.println("2. Gerir Compromissos");
+            System.out.println("0. Sair");
+            System.out.print("Escolha uma opção: ");
+
+            int opcao = lerOpcao();
+
+            switch (opcao) {
+                case 1:
+                    menuTarefas();
+                    break;
+                case 2:
+                    menuCompromissos();
+                    break;
+                case 0:
+                    System.out.println("A sair do sistema...");
+                    return;
+                default:
+                    System.out.println("Opção inválida! Tente novamente.");
+            }
+        }
+    }
+
+    private boolean fazerLogin() {
+        System.out.println("\n---[ Login Nexus Hub ]---");
+        for (int i = 0; i < 3; i++) {
+            System.out.print("E-mail: ");
+            String email = scanner.nextLine();
+
+            System.out.print("Senha: ");
+            String senha = scanner.nextLine();
+
+            Usuario usuario = usuarioDAO.login(email, senha);
+
+            if (usuario != null) {
+                this.usuarioLogado = usuario;
+                return true;
+            } else {
+                System.out.println("Credenciais inválidas! Tente novamente (" + (2 - i) + " tentativas restantes).");
+            }
+        }
+        return false;
+    }
+
+    private int lerOpcao() {
+        try {
+            return Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    // --- MÉTODOS DE TAREFAS ---
+
+    private void menuTarefas() {
+        while (true) {
+            System.out.println("\n---[ Gerir Tarefas ]---");
+            System.out.println("1. Adicionar Tarefa");
+            System.out.println("2. Listar Tarefas");
+            System.out.println("3. Atualizar Tarefa");
+            System.out.println("4. Excluir Tarefa");
+            System.out.println("0. Voltar");
+            System.out.print("Escolha uma opção: ");
+
+            int opcao = lerOpcao();
+
+            switch (opcao) {
+                case 1: adicionarTarefa(); break;
+                case 2: listarTarefas(); break;
+                case 3: atualizarTarefa(); break;
+                case 4: excluirTarefa(); break;
+                case 0: return;
+                default: System.out.println("Opção inválida!");
+            }
+        }
+    }
+
+    private void adicionarTarefa() {
+        System.out.println("\n--- Adicionar Nova Tarefa ---");
+        System.out.print("Descrição: ");
+        String descricao = scanner.nextLine();
+
+        String prioridade = "";
+        while (true) {
+            System.out.print("Prioridade (baixa, media, alta): ");
+            prioridade = scanner.nextLine().toLowerCase();
+            if (prioridade.equals("baixa") || prioridade.equals("media") || prioridade.equals("alta")) {
+                break;
+            }
+            System.out.println("Prioridade inválida!");
+        }
+
+        int idCategoria = 1;
+
+        Tarefa tarefa = new Tarefa(descricao, LocalDate.now(), prioridade, usuarioLogado.getId(), idCategoria);
+        tarefaDAO.adicionarTarefa(tarefa);
+    }
+
+    private void listarTarefas() {
+        System.out.println("\n--- Lista de Tarefas de " + usuarioLogado.getNome() + " ---");
+        List<Tarefa> tarefas = tarefaDAO.listarTodasAsTarefas();
+
+        if (tarefas.isEmpty()) {
+            System.out.println("Nenhuma tarefa encontrada.");
+        } else {
+            for (Tarefa t : tarefas) {
+                if (t.getIdUsuario() == usuarioLogado.getId()) {
+                    System.out.printf("ID: %d | Descrição: %s | Prioridade: %s | Concluída: %s\n",
+                            t.getIdTarefa(), t.getDescricao(), t.getPrioridade(), t.isConcluida() ? "Sim" : "Não");
+                }
+            }
+        }
+    }
+
+    private void atualizarTarefa() {
+        listarTarefas();
+        System.out.print("ID da tarefa a atualizar: ");
+        int id = lerOpcao();
+
+        Tarefa tarefa = tarefaDAO.buscarTarefaPorId(id);
+
+        if (tarefa == null || tarefa.getIdUsuario() != usuarioLogado.getId()) {
+            System.out.println("Tarefa não encontrada ou sem permissão.");
+            return;
+        }
+
+        System.out.print("Nova descrição (Enter para manter '" + tarefa.getDescricao() + "'): ");
+        String desc = scanner.nextLine();
+        if (!desc.isEmpty()) tarefa.setDescricao(desc);
+
+        tarefaDAO.atualizarTarefa(tarefa);
+    }
+
+    private void excluirTarefa() {
+        listarTarefas();
+        System.out.print("ID da tarefa a excluir: ");
+        int id = lerOpcao();
+
+        tarefaDAO.excluirTarefa(id);
+    }
+
+
+    // --- MÉTODOS DE COMPROMISSOS ---
+
+    private void menuCompromissos() {
+        while (true) {
+            System.out.println("\n---[ Gerir Compromissos ]---");
+            System.out.println("1. Agendar Compromisso");
+            System.out.println("2. Listar Compromissos");
+            System.out.println("3. Atualizar Compromisso");
+            System.out.println("4. Excluir Compromisso");
+            System.out.println("0. Voltar");
+            System.out.print("Escolha uma opção: ");
+
+            int opcao = lerOpcao();
+
+            switch (opcao) {
+                case 1: adicionarCompromisso(); break;
+                case 2: listarCompromissos(); break;
+                case 3: atualizarCompromisso(); break;
+                case 4: excluirCompromisso(); break;
+                case 0: return;
+                default: System.out.println("Opção inválida!");
+            }
+        }
+    }
+
+    private void adicionarCompromisso() {
+        System.out.println("\n--- Agendar Novo Compromisso ---");
+        System.out.print("Título: ");
+        String titulo = scanner.nextLine();
+
+        System.out.print("Local: ");
+        String local = scanner.nextLine();
+
+        LocalDateTime inicio = lerDataHora("Data/Hora Início (dd/MM/yyyy HH:mm): ");
+        if (inicio == null) return;
+
+        LocalDateTime fim = lerDataHora("Data/Hora Fim (dd/MM/yyyy HH:mm): ");
+        if (fim == null) return;
+
+        if (fim.isBefore(inicio)) {
+            System.out.println("Erro: A data de fim não pode ser anterior à data de início.");
+            return;
+        }
+
+        Compromisso compromisso = new Compromisso(titulo, inicio, fim, local, usuarioLogado.getId());
+        compromissoDAO.adicionar(compromisso);
+    }
+
+    private void listarCompromissos() {
+        System.out.println("\n--- Agenda de Compromissos de " + usuarioLogado.getNome() + " ---");
+
+        List<Compromisso> lista = compromissoDAO.listarPorUsuario(usuarioLogado.getId());
+
+        if (lista.isEmpty()) {
+            System.out.println("Nenhum compromisso agendado.");
+        } else {
+            for (Compromisso c : lista) {
+                System.out.printf("ID: %d | %s | %s - %s | %s\n",
+                        c.getId(),
+                        c.getTitulo(),
+                        c.getDataHoraInicio().format(formatter),
+                        c.getDataHoraFim().format(formatter),
+                        c.getLocal());
+            }
+        }
+    }
+
+    private void atualizarCompromisso() {
+        listarCompromissos();
+        System.out.print("ID do compromisso a atualizar: ");
+        int id = lerOpcao();
+
+        Compromisso compromisso = compromissoDAO.buscarPorId(id);
+
+        if (compromisso == null || compromisso.getIdUsuario() != usuarioLogado.getId()) {
+            System.out.println("Compromisso não encontrado ou sem permissão.");
+            return;
+        }
+
+        System.out.print("Novo título (Enter para manter '" + compromisso.getTitulo() + "'): ");
+        String titulo = scanner.nextLine();
+        if (!titulo.isEmpty()) compromisso.setTitulo(titulo);
+
+        System.out.print("Novo local (Enter para manter '" + compromisso.getLocal() + "'): ");
+        String local = scanner.nextLine();
+        if (!local.isEmpty()) compromisso.setLocal(local);
+
+        System.out.print("Deseja alterar as datas? (S/N): ");
+        String alterarDatas = scanner.nextLine();
+
+        if (alterarDatas.equalsIgnoreCase("S")) {
+            LocalDateTime inicio = lerDataHora("Nova Data/Hora Início (dd/MM/yyyy HH:mm): ");
+            if (inicio != null) {
+                LocalDateTime fim = lerDataHora("Nova Data/Hora Fim (dd/MM/yyyy HH:mm): ");
+                if (fim != null) {
+                    if (fim.isBefore(inicio)) {
+                        System.out.println("Erro: A data de fim não pode ser anterior à data de início. Datas não alteradas.");
+                    } else {
+                        compromisso.setDataHoraInicio(inicio);
+                        compromisso.setDataHoraFim(fim);
+                    }
+                }
+            }
+        }
+
+        compromissoDAO.atualizar(compromisso);
+    }
+
+    private void excluirCompromisso() {
+        listarCompromissos();
+        System.out.print("ID do compromisso a excluir: ");
+        int id = lerOpcao();
+        compromissoDAO.excluir(id);
+    }
+
+    private LocalDateTime lerDataHora(String mensagem) {
+        System.out.print(mensagem);
+        String entrada = scanner.nextLine();
+        try {
+            return LocalDateTime.parse(entrada, formatter);
+        } catch (Exception e) {
+            System.out.println("Formato de data inválido! Use dd/MM/yyyy HH:mm");
+            return null;
+        }
+    }
+}
