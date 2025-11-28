@@ -57,24 +57,59 @@ public class MenuPrincipal {
     }
 
     private boolean fazerLogin() {
-        System.out.println("\n---[ Login Nexus Hub ]---");
-        for (int i = 0; i < 3; i++) {
-            System.out.print("E-mail: ");
-            String email = scanner.nextLine();
+        while (true) {
+            System.out.println("\n---[ Acesso ao Nexus Hub ]---");
+            System.out.println("1. Login");
+            System.out.println("2. Cadastrar Novo Usuário");
+            System.out.println("0. Sair");
+            System.out.print("Escolha uma opção: ");
 
-            System.out.print("Senha: ");
-            String senha = scanner.nextLine();
+            int opcao = lerOpcao();
 
-            Usuario usuario = usuarioDAO.login(email, senha);
+            if (opcao == 1) {
+                System.out.print("E-mail: ");
+                String email = scanner.nextLine();
+                System.out.print("Senha: ");
+                String senha = scanner.nextLine();
 
-            if (usuario != null) {
-                this.usuarioLogado = usuario;
-                return true;
+                Usuario usuario = usuarioDAO.login(email, senha);
+
+                if (usuario != null) {
+                    this.usuarioLogado = usuario;
+                    return true;
+                } else {
+                    System.out.println("Credenciais inválidas!");
+                }
+            } else if (opcao == 2) {
+                cadastrarUsuario();
+            } else if (opcao == 0) {
+                return false;
             } else {
-                System.out.println("Credenciais inválidas! Tente novamente (" + (2 - i) + " tentativas restantes).");
+                System.out.println("Opção inválida.");
             }
         }
-        return false;
+    }
+
+    private void cadastrarUsuario() {
+        System.out.println("\n--- Novo Cadastro ---");
+        System.out.print("Nome: ");
+        String nome = scanner.nextLine();
+
+        System.out.print("E-mail: ");
+        String email = scanner.nextLine();
+
+        System.out.print("Senha: ");
+        String senha = scanner.nextLine();
+
+        if (nome.isEmpty() || email.isEmpty() || senha.isEmpty()) {
+            System.out.println("Erro: Todos os campos são obrigatórios.");
+            return;
+        }
+
+        Usuario novoUsuario = new Usuario(nome, email, senha);
+        usuarioDAO.cadastrar(novoUsuario);
+
+        System.out.println("Cadastro realizado com sucesso! Faça login para continuar.");
     }
 
     private int lerOpcao() {
