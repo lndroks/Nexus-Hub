@@ -116,4 +116,38 @@ public class CompromissoDAO {
         }
         return null;
     }
+
+    public List<Compromisso> buscarPorPalavraChave(int idUsuario, String palavraChave) {
+        List<Compromisso> compromissos = new ArrayList<>();
+
+        String sql = "SELECT * FROM COMPROMISSO WHERE id_usuario = ? AND (titulo ILIKE ? OR local ILIKE ?)";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idUsuario);
+            String termoBusca = "%" + palavraChave + "%";
+            stmt.setString(2, termoBusca);
+            stmt.setString(3, termoBusca);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Compromisso c = new Compromisso();
+                    c.setId(rs.getInt("id_compromisso"));
+                    c.setTitulo(rs.getString("titulo"));
+
+                    c.setDataHoraInicio(rs.getTimestamp("data_hora_inicio").toLocalDateTime());
+                    c.setDataHoraFim(rs.getTimestamp("data_hora_fim").toLocalDateTime());
+                    c.setLocal(rs.getString("local"));
+                    c.setIdUsuario(rs.getInt("id_usuario"));
+
+                    compromissos.add(c);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao buscar compromissos: " + e.getMessage(), e);
+        }
+        return compromissos;
+    }
 }
