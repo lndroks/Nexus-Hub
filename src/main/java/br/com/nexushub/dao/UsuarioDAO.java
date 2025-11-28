@@ -36,7 +36,7 @@ public class UsuarioDAO {
 
         return null;
     }
-    
+
     public void cadastrar(Usuario usuario) {
         String sql = "INSERT INTO USUARIO (nome, email, senha) VALUES (?, ?, ?)";
 
@@ -48,10 +48,13 @@ public class UsuarioDAO {
             stmt.setString(3, usuario.getSenha());
 
             stmt.execute();
-            System.out.println("Usuário cadastrado com sucesso!");
 
         } catch (SQLException e) {
-            throw new RuntimeException("Erro ao cadastrar usuário: " + e.getMessage(), e);
+            if (e.getMessage().contains("duplicate key")) {
+                System.out.println("Erro: E-mail já cadastrado.");
+            } else {
+                throw new RuntimeException("Erro ao cadastrar usuário: " + e.getMessage(), e);
+            }
         }
     }
 }
