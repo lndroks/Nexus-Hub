@@ -70,32 +70,33 @@ public class TarefaDAO {
         }
     }
 
-    public List<Tarefa> listarTodasAsTarefas() {
+    public List<Tarefa> listarPorUsuario(int idUsuario) {
         List<Tarefa> tarefas = new ArrayList<>();
-        String sql = "SELECT * FROM TAREFA";
+        String sql = "SELECT * FROM TAREFA WHERE id_usuario = ?";
 
         try (Connection conexao = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conexao.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conexao.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                String descricao = rs.getString("descricao");
-                LocalDate dataCriacao = rs.getDate("data_criacao").toLocalDate();
-                String prioridade = rs.getString("prioridade");
-                int idUsuario = rs.getInt("id_usuario");
-                int idCategoria = rs.getInt("id_categoria");
+            stmt.setInt(1, idUsuario); // Define o filtro pelo ID do usuário
 
-                Tarefa tarefa = new Tarefa(descricao, dataCriacao, prioridade, idUsuario, idCategoria);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String descricao = rs.getString("descricao");
+                    LocalDate dataCriacao = rs.getDate("data_criacao").toLocalDate();
+                    String prioridade = rs.getString("prioridade");
+                    int idCategoria = rs.getInt("id_categoria");
 
-                tarefa.setIdTarefa(rs.getInt("id_tarefa"));
-                tarefa.setConcluida(rs.getBoolean("concluida"));
+                    Tarefa tarefa = new Tarefa(descricao, dataCriacao, prioridade, idUsuario, idCategoria);
 
-                tarefas.add(tarefa);
+                    tarefa.setIdTarefa(rs.getInt("id_tarefa"));
+                    tarefa.setConcluida(rs.getBoolean("concluida"));
+
+                    tarefas.add(tarefa);
+                }
             }
 
         } catch (SQLException e) {
-            System.err.println("Erro ao listar tarefas: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException("Erro ao listar tarefas: " + e.getMessage(), e);
         }
         return tarefas;
     }

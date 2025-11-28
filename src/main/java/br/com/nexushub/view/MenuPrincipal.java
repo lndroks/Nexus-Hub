@@ -133,16 +133,18 @@ public class MenuPrincipal {
 
     private void listarTarefas() {
         System.out.println("\n--- Lista de Tarefas de " + usuarioLogado.getNome() + " ---");
-        List<Tarefa> tarefas = tarefaDAO.listarTodasAsTarefas();
+
+        List<Tarefa> tarefas = tarefaDAO.listarPorUsuario(usuarioLogado.getId());
 
         if (tarefas.isEmpty()) {
             System.out.println("Nenhuma tarefa encontrada.");
         } else {
             for (Tarefa t : tarefas) {
-                if (t.getIdUsuario() == usuarioLogado.getId()) {
-                    System.out.printf("ID: %d | Descrição: %s | Prioridade: %s | Concluída: %s\n",
-                            t.getIdTarefa(), t.getDescricao(), t.getPrioridade(), t.isConcluida() ? "Sim" : "Não");
-                }
+                System.out.printf("ID: %d | Descrição: %s | Prioridade: %s | Concluída: %s\n",
+                        t.getIdTarefa(),
+                        t.getDescricao(),
+                        t.getPrioridade(),
+                        t.isConcluida() ? "Sim" : "Não");
             }
         }
     }
