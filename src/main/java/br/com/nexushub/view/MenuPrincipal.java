@@ -126,9 +126,10 @@ public class MenuPrincipal {
         while (true) {
             System.out.println("\n---[ Gerir Tarefas ]---");
             System.out.println("1. Adicionar Tarefa");
-            System.out.println("2. Listar Tarefas");
-            System.out.println("3. Atualizar Tarefa");
-            System.out.println("4. Excluir Tarefa");
+            System.out.println("2. Listar Todas as Tarefas");
+            System.out.println("3. Buscar Tarefas (Palavra-chave)"); // Nova opção
+            System.out.println("4. Atualizar Tarefa");
+            System.out.println("5. Excluir Tarefa");
             System.out.println("0. Voltar");
             System.out.print("Escolha uma opção: ");
 
@@ -137,8 +138,9 @@ public class MenuPrincipal {
             switch (opcao) {
                 case 1: adicionarTarefa(); break;
                 case 2: listarTarefas(); break;
-                case 3: atualizarTarefa(); break;
-                case 4: excluirTarefa(); break;
+                case 3: buscarTarefas(); break;
+                case 4: atualizarTarefa(); break;
+                case 5: excluirTarefa(); break;
                 case 0: return;
                 default: System.out.println("Opção inválida!");
             }
@@ -184,6 +186,23 @@ public class MenuPrincipal {
         }
     }
 
+    private void buscarTarefas() {
+        System.out.print("Digite a palavra-chave para buscar na descrição: ");
+        String termo = scanner.nextLine();
+
+        List<Tarefa> tarefas = tarefaDAO.buscarPorPalavraChave(usuarioLogado.getId(), termo);
+
+        if (tarefas.isEmpty()) {
+            System.out.println("Nenhuma tarefa encontrada com o termo '" + termo + "'.");
+        } else {
+            System.out.println("\n--- Resultados da Busca ---");
+            for (Tarefa t : tarefas) {
+                System.out.printf("ID: %d | Descrição: %s | Prioridade: %s | Concluída: %s\n",
+                        t.getIdTarefa(), t.getDescricao(), t.getPrioridade(), t.isConcluida() ? "Sim" : "Não");
+            }
+        }
+    }
+
     private void atualizarTarefa() {
         listarTarefas();
         System.out.print("ID da tarefa a atualizar: ");
@@ -218,9 +237,10 @@ public class MenuPrincipal {
         while (true) {
             System.out.println("\n---[ Gerir Compromissos ]---");
             System.out.println("1. Agendar Compromisso");
-            System.out.println("2. Listar Compromissos");
-            System.out.println("3. Atualizar Compromisso");
-            System.out.println("4. Excluir Compromisso");
+            System.out.println("2. Listar Todos os Compromissos");
+            System.out.println("3. Buscar Compromissos (Palavra-chave)"); // Nova opção
+            System.out.println("4. Atualizar Compromisso");
+            System.out.println("5. Excluir Compromisso");
             System.out.println("0. Voltar");
             System.out.print("Escolha uma opção: ");
 
@@ -229,8 +249,9 @@ public class MenuPrincipal {
             switch (opcao) {
                 case 1: adicionarCompromisso(); break;
                 case 2: listarCompromissos(); break;
-                case 3: atualizarCompromisso(); break;
-                case 4: excluirCompromisso(); break;
+                case 3: buscarCompromissos(); break;
+                case 4: atualizarCompromisso(); break;
+                case 5: excluirCompromisso(); break;
                 case 0: return;
                 default: System.out.println("Opção inválida!");
             }
@@ -269,6 +290,27 @@ public class MenuPrincipal {
             System.out.println("Nenhum compromisso agendado.");
         } else {
             for (Compromisso c : lista) {
+                System.out.printf("ID: %d | %s | %s - %s | %s\n",
+                        c.getId(),
+                        c.getTitulo(),
+                        c.getDataHoraInicio().format(formatter),
+                        c.getDataHoraFim().format(formatter),
+                        c.getLocal());
+            }
+        }
+    }
+
+    private void buscarCompromissos() {
+        System.out.print("Digite a palavra-chave para buscar (Título ou Local): ");
+        String termo = scanner.nextLine();
+
+        List<Compromisso> compromissos = compromissoDAO.buscarPorPalavraChave(usuarioLogado.getId(), termo);
+
+        if (compromissos.isEmpty()) {
+            System.out.println("Nenhum compromisso encontrado com o termo '" + termo + "'.");
+        } else {
+            System.out.println("\n--- Resultados da Busca ---");
+            for (Compromisso c : compromissos) {
                 System.out.printf("ID: %d | %s | %s - %s | %s\n",
                         c.getId(),
                         c.getTitulo(),

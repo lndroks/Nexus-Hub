@@ -130,4 +130,36 @@ public class TarefaDAO {
         }
         return tarefa;
     }
+
+    public List<Tarefa> buscarPorPalavraChave(int idUsuario, String palavraChave) {
+        List<Tarefa> tarefas = new ArrayList<>();
+
+        String sql = "SELECT * FROM TAREFA WHERE id_usuario = ? AND descricao ILIKE ?";
+
+        try (Connection conexao = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conexao.prepareStatement(sql)) {
+
+            stmt.setInt(1, idUsuario);
+
+            stmt.setString(2, "%" + palavraChave + "%");
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String descricao = rs.getString("descricao");
+                    LocalDate dataCriacao = rs.getDate("data_criacao").toLocalDate();
+                    String prioridade = rs.getString("prioridade");
+                    int idCategoria = rs.getInt("id_categoria");
+
+                    Tarefa tarefa = new Tarefa(descricao, dataCriacao, prioridade, idUsuario, idCategoria);
+                    tarefa.setIdTarefa(rs.getInt("id_tarefa"));
+                    tarefa.setConcluida(rs.getBoolean("concluida"));
+
+                    tarefas.add(tarefa);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao buscar tarefas: " + e.getMessage(), e);
+        }
+        return tarefas;
+    }
 }
