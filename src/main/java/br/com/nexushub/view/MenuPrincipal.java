@@ -10,8 +10,10 @@ import br.com.nexushub.model.Usuario;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class MenuPrincipal {
 
@@ -28,6 +30,8 @@ public class MenuPrincipal {
             System.out.println("Login falhou. Encerrando aplicação.");
             return;
         }
+
+        exibirDashboard();
 
         System.out.println("\nBem-vindo, " + usuarioLogado.getNome() + "!");
 
@@ -56,25 +60,111 @@ public class MenuPrincipal {
         }
     }
 
-    private boolean fazerLogin() {
-        System.out.println("\n---[ Login Nexus Hub ]---");
-        for (int i = 0; i < 3; i++) {
-            System.out.print("E-mail: ");
-            String email = scanner.nextLine();
+    private void exibirDashboard() {
+        System.out.println("\n========================================");
+        System.out.println("      DASHBOARD - " + usuarioLogado.getNome().toUpperCase());
+        System.out.println("========================================");
 
-            System.out.print("Senha: ");
-            String senha = scanner.nextLine();
+        System.out.println("\n---[ Tarefas Prioritárias Pendentes ]---");
+        List<Tarefa> todasTarefas = tarefaDAO.listarPorUsuario(usuarioLogado.getId());
 
-            Usuario usuario = usuarioDAO.login(email, senha);
+        List<Tarefa> pendentes = todasTarefas.stream()
+                .filter(t -> !t.isConcluida())
+                .limit(3)
+                .collect(Collectors.toList());
 
-            if (usuario != null) {
-                this.usuarioLogado = usuario;
-                return true;
-            } else {
-                System.out.println("Credenciais inválidas! Tente novamente (" + (2 - i) + " tentativas restantes).");
+        if (pendentes.isEmpty()) {
+            System.out.println("Nenhuma tarefa pendente! Bom trabalho.");
+        } else {
+            for (Tarefa t : pendentes) {
+                System.out.printf("- [%s] %s\n", t.getPrioridade().toUpperCase(), t.getDescricao());
+            }
+            long totalPendentes = todasTarefas.stream().filter(t -> !t.isConcluida()).count();
+            if (totalPendentes > 3) {
+                System.out.println("... e mais " + (totalPendentes - 3) + " tarefas.");
             }
         }
-        return false;
+
+        System.out.println("\n---[ Próximos Compromissos ]---");
+        List<Compromisso> todosCompromissos = compromissoDAO.listarPorUsuario(usuarioLogado.getId());
+
+        LocalDateTime agora = LocalDateTime.now();
+        List<Compromisso> futuros = todosCompromissos.stream()
+                .filter(c -> c.getDataHoraFim().isAfter(agora))
+                .sorted(Comparator.comparing(Compromisso::getDataHoraInicio))
+                .limit(3)
+                .collect(Collectors.toList());
+
+        if (futuros.isEmpty()) {
+            System.out.println("Nenhum compromisso agendado para breve.");
+        } else {
+            for (Compromisso c : futuros) {
+                System.out.printf("- %s: %s (%s)\n",
+                        c.getDataHoraInicio().format(formatter),
+                        c.getTitulo(),
+                        c.getLocal());
+            }
+        }
+        System.out.println("========================================\n");
+
+        System.out.println("Pressione Enter para ir ao menu...");
+        scanner.nextLine();
+    }
+
+    private boolean fazerLogin() {
+        while (true) {
+            System.out.println("\n---[ Acesso ao Nexus Hub ]---");
+            System.out.println("1. Login");
+            System.out.println("2. Cadastrar Novo Usuário");
+            System.out.println("0. Sair");
+            System.out.print("Escolha uma opção: ");
+
+            int opcao = lerOpcao();
+
+            if (opcao == 1) {
+                System.out.print("E-mail: ");
+                String email = scanner.nextLine();
+                System.out.print("Senha: ");
+                String senha = scanner.nextLine();
+
+                Usuario usuario = usuarioDAO.login(email, senha);
+
+                if (usuario != null) {
+                    this.usuarioLogado = usuario;
+                    return true;
+                } else {
+                    System.out.println("Credenciais inválidas!");
+                }
+            } else if (opcao == 2) {
+                cadastrarUsuario();
+            } else if (opcao == 0) {
+                return false;
+            } else {
+                System.out.println("Opção inválida.");
+            }
+        }
+    }
+
+    private void cadastrarUsuario() {
+        System.out.println("\n--- Novo Cadastro ---");
+        System.out.print("Nome: ");
+        String nome = scanner.nextLine();
+
+        System.out.print("E-mail: ");
+        String email = scanner.nextLine();
+
+        System.out.print("Senha: ");
+        String senha = scanner.nextLine();
+
+        if (nome.isEmpty() || email.isEmpty() || senha.isEmpty()) {
+            System.out.println("Erro: Todos os campos são obrigatórios.");
+            return;
+        }
+
+        Usuario novoUsuario = new Usuario(nome, email, senha);
+        usuarioDAO.cadastrar(novoUsuario);
+
+        System.out.println("Cadastro realizado com sucesso! Faça login para continuar.");
     }
 
     private int lerOpcao() {
@@ -91,9 +181,10 @@ public class MenuPrincipal {
         while (true) {
             System.out.println("\n---[ Gerir Tarefas ]---");
             System.out.println("1. Adicionar Tarefa");
-            System.out.println("2. Listar Tarefas");
-            System.out.println("3. Atualizar Tarefa");
-            System.out.println("4. Excluir Tarefa");
+            System.out.println("2. Listar Todas as Tarefas");
+            System.out.println("3. Buscar Tarefas (Palavra-chave)"); // Nova opção
+            System.out.println("4. Atualizar Tarefa");
+            System.out.println("5. Excluir Tarefa");
             System.out.println("0. Voltar");
             System.out.print("Escolha uma opção: ");
 
@@ -102,8 +193,9 @@ public class MenuPrincipal {
             switch (opcao) {
                 case 1: adicionarTarefa(); break;
                 case 2: listarTarefas(); break;
-                case 3: atualizarTarefa(); break;
-                case 4: excluirTarefa(); break;
+                case 3: buscarTarefas(); break;
+                case 4: atualizarTarefa(); break;
+                case 5: excluirTarefa(); break;
                 case 0: return;
                 default: System.out.println("Opção inválida!");
             }
@@ -149,6 +241,23 @@ public class MenuPrincipal {
         }
     }
 
+    private void buscarTarefas() {
+        System.out.print("Digite a palavra-chave para buscar na descrição: ");
+        String termo = scanner.nextLine();
+
+        List<Tarefa> tarefas = tarefaDAO.buscarPorPalavraChave(usuarioLogado.getId(), termo);
+
+        if (tarefas.isEmpty()) {
+            System.out.println("Nenhuma tarefa encontrada com o termo '" + termo + "'.");
+        } else {
+            System.out.println("\n--- Resultados da Busca ---");
+            for (Tarefa t : tarefas) {
+                System.out.printf("ID: %d | Descrição: %s | Prioridade: %s | Concluída: %s\n",
+                        t.getIdTarefa(), t.getDescricao(), t.getPrioridade(), t.isConcluida() ? "Sim" : "Não");
+            }
+        }
+    }
+
     private void atualizarTarefa() {
         listarTarefas();
         System.out.print("ID da tarefa a atualizar: ");
@@ -183,9 +292,10 @@ public class MenuPrincipal {
         while (true) {
             System.out.println("\n---[ Gerir Compromissos ]---");
             System.out.println("1. Agendar Compromisso");
-            System.out.println("2. Listar Compromissos");
-            System.out.println("3. Atualizar Compromisso");
-            System.out.println("4. Excluir Compromisso");
+            System.out.println("2. Listar Todos os Compromissos");
+            System.out.println("3. Buscar Compromissos (Palavra-chave)"); // Nova opção
+            System.out.println("4. Atualizar Compromisso");
+            System.out.println("5. Excluir Compromisso");
             System.out.println("0. Voltar");
             System.out.print("Escolha uma opção: ");
 
@@ -194,8 +304,9 @@ public class MenuPrincipal {
             switch (opcao) {
                 case 1: adicionarCompromisso(); break;
                 case 2: listarCompromissos(); break;
-                case 3: atualizarCompromisso(); break;
-                case 4: excluirCompromisso(); break;
+                case 3: buscarCompromissos(); break;
+                case 4: atualizarCompromisso(); break;
+                case 5: excluirCompromisso(); break;
                 case 0: return;
                 default: System.out.println("Opção inválida!");
             }
@@ -234,6 +345,27 @@ public class MenuPrincipal {
             System.out.println("Nenhum compromisso agendado.");
         } else {
             for (Compromisso c : lista) {
+                System.out.printf("ID: %d | %s | %s - %s | %s\n",
+                        c.getId(),
+                        c.getTitulo(),
+                        c.getDataHoraInicio().format(formatter),
+                        c.getDataHoraFim().format(formatter),
+                        c.getLocal());
+            }
+        }
+    }
+
+    private void buscarCompromissos() {
+        System.out.print("Digite a palavra-chave para buscar (Título ou Local): ");
+        String termo = scanner.nextLine();
+
+        List<Compromisso> compromissos = compromissoDAO.buscarPorPalavraChave(usuarioLogado.getId(), termo);
+
+        if (compromissos.isEmpty()) {
+            System.out.println("Nenhum compromisso encontrado com o termo '" + termo + "'.");
+        } else {
+            System.out.println("\n--- Resultados da Busca ---");
+            for (Compromisso c : compromissos) {
                 System.out.printf("ID: %d | %s | %s - %s | %s\n",
                         c.getId(),
                         c.getTitulo(),
