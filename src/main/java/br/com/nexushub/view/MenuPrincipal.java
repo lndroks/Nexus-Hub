@@ -10,8 +10,10 @@ import br.com.nexushub.model.Usuario;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class MenuPrincipal {
 
@@ -28,6 +30,8 @@ public class MenuPrincipal {
             System.out.println("Login falhou. Encerrando aplicação.");
             return;
         }
+
+        exibirDashboard();
 
         System.out.println("\nBem-vindo, " + usuarioLogado.getNome() + "!");
 
@@ -54,6 +58,57 @@ public class MenuPrincipal {
                     System.out.println("Opção inválida! Tente novamente.");
             }
         }
+    }
+
+    private void exibirDashboard() {
+        System.out.println("\n========================================");
+        System.out.println("      DASHBOARD - " + usuarioLogado.getNome().toUpperCase());
+        System.out.println("========================================");
+
+        System.out.println("\n---[ Tarefas Prioritárias Pendentes ]---");
+        List<Tarefa> todasTarefas = tarefaDAO.listarPorUsuario(usuarioLogado.getId());
+
+        List<Tarefa> pendentes = todasTarefas.stream()
+                .filter(t -> !t.isConcluida())
+                .limit(3)
+                .collect(Collectors.toList());
+
+        if (pendentes.isEmpty()) {
+            System.out.println("Nenhuma tarefa pendente! Bom trabalho.");
+        } else {
+            for (Tarefa t : pendentes) {
+                System.out.printf("- [%s] %s\n", t.getPrioridade().toUpperCase(), t.getDescricao());
+            }
+            long totalPendentes = todasTarefas.stream().filter(t -> !t.isConcluida()).count();
+            if (totalPendentes > 3) {
+                System.out.println("... e mais " + (totalPendentes - 3) + " tarefas.");
+            }
+        }
+
+        System.out.println("\n---[ Próximos Compromissos ]---");
+        List<Compromisso> todosCompromissos = compromissoDAO.listarPorUsuario(usuarioLogado.getId());
+
+        LocalDateTime agora = LocalDateTime.now();
+        List<Compromisso> futuros = todosCompromissos.stream()
+                .filter(c -> c.getDataHoraFim().isAfter(agora))
+                .sorted(Comparator.comparing(Compromisso::getDataHoraInicio))
+                .limit(3)
+                .collect(Collectors.toList());
+
+        if (futuros.isEmpty()) {
+            System.out.println("Nenhum compromisso agendado para breve.");
+        } else {
+            for (Compromisso c : futuros) {
+                System.out.printf("- %s: %s (%s)\n",
+                        c.getDataHoraInicio().format(formatter),
+                        c.getTitulo(),
+                        c.getLocal());
+            }
+        }
+        System.out.println("========================================\n");
+
+        System.out.println("Pressione Enter para ir ao menu...");
+        scanner.nextLine();
     }
 
     private boolean fazerLogin() {
